@@ -1,37 +1,24 @@
-const form = document.querySelector('#trip-form');
-const destination = document.querySelector('#destination');
-const result = document.querySelector('#result');
-const resultContent = document.querySelector('#result-content');
-const escapeHtml = (value) => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-
-document.querySelectorAll('[data-destination]').forEach(card => {
-  card.addEventListener('click', () => {
-    destination.value = card.dataset.destination;
-    destination.focus();
-    document.querySelector('#start').scrollIntoView({behavior:'smooth'});
-  });
-});
-
-form.addEventListener('submit', event => {
-  event.preventDefault();
-  if (!form.reportValidity()) return;
-  const data = new FormData(form);
-  const interests = data.getAll('interests');
-  const fields = [
-    ['出发地', data.get('departure')],
-    ['想去的地方', data.get('destination') || '一起探索'],
-    ['出发日期', data.get('date') || '待定'],
-    ['旅行时长', data.get('duration') || '待定'],
-    ['同行人数', data.get('travelers')],
-    ['每人预算', data.get('budget') || '待定'],
-    ['旅行偏好', interests.length ? interests.join('、') : '待定']
-  ];
-  resultContent.innerHTML = `<dl class="summary-grid">${fields.map(([label,value]) => `<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>${data.get('notes') ? `<div class="summary-note"><strong>特别想法</strong><p>${escapeHtml(data.get('notes'))}</p></div>` : ''}`;
-  result.hidden = false;
-  result.scrollIntoView({behavior:'smooth',block:'start'});
-});
-
-document.querySelector('#edit-trip').addEventListener('click', () => {
-  document.querySelector('#start').scrollIntoView({behavior:'smooth'});
-  form.querySelector('input').focus({preventScroll:true});
-});
+const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const slides=[
+ ['◎','先定国家，<br><em>再一起挑城市。</em>','第一轮只确认要考虑哪些城市。你去过的城市也是有用的线索。'],
+ ['↗','城市定了，<br><em>再串成一条路线。</em>','第二轮调整城市先后与停留天数。正式版会结合航班和城际交通研究。'],
+ ['✳','走进每座城，<br><em>选真正想看的。</em>','第三轮逐城挑选景点与体验，再研究开放时间、位置和市内交通。'],
+ ['☼','最后，看到<em>每天怎么走。</em>','前面三轮确认后才生成逐日安排。每一轮做的事不同，也可以随时返回修改。']
+];
+const suggestions={日本:['东京','京都','大阪','奈良','箱根','札幌'],法国:['巴黎','里昂','尼斯','波尔多'],意大利:['罗马','佛罗伦萨','威尼斯','米兰'],希腊:['雅典','圣托里尼','米科诺斯'],土耳其:['伊斯坦布尔','卡帕多奇亚','安塔利亚']};
+const sights={东京:['浅草寺','上野公园','涩谷街区'],京都:['伏见稻荷大社','清水寺','岚山'],大阪:['大阪城','道顿堀'],巴黎:['埃菲尔铁塔','卢浮宫','蒙马特'],罗马:['斗兽场','万神殿'],佛罗伦萨:['圣母百花大教堂','乌菲兹美术馆'],威尼斯:['圣马可广场','大运河'],雅典:['雅典卫城','普拉卡老城'],圣托里尼:['伊亚小镇','费拉步道'],伊斯坦布尔:['圣索菲亚大教堂','蓝色清真寺'],卡帕多奇亚:['格雷梅露天博物馆','热气球体验']};
+const state={round:0,slide:0,cities:[],days:{},sights:{}}, form=$('#trip-form');
+function go(n){state.round=n;document.querySelectorAll('.round-panel').forEach(p=>p.hidden=Number(p.dataset.round)!==n);document.querySelectorAll('.track-item').forEach(p=>p.classList.toggle('active',Number(p.dataset.track)===n));if(n===2)route();if(n===3)attractions();if(n===4)days();$('#planner').scrollIntoView({behavior:'smooth'});}
+function slide(n){state.slide=Math.max(0,Math.min(3,n));const [icon,title,description]=slides[state.slide];$('#slide-index').textContent=`0${state.slide+1} / 04`;$('#slide-icon').textContent=icon;$('#slide-title').innerHTML=title;$('#slide-description').textContent=description;$('#slide-dots').innerHTML=slides.map((_,i)=>`<button type="button" data-slide="${i}" class="${i===state.slide?'active':''}" aria-label="查看第 ${i+1} 步"></button>`).join('');$('#slide-prev').disabled=state.slide===0;$('#slide-next').disabled=state.slide===3;}
+function cities(){const country=$('#country').value.trim(),list=suggestions[country]||[];$('#city-help').textContent=list.length?`以下是${country}的城市灵感，你可以挑选或自行添加。`:'可以自行添加想去的城市；更多候选将在正式版结合目的地研究。';$('#city-options').innerHTML=list.map(c=>`<button type="button" class="city-chip ${state.cities.includes(c)?'selected':''}" data-city-option="${esc(c)}" aria-pressed="${state.cities.includes(c)}">${esc(c)} <span>${state.cities.includes(c)?'✓':'＋'}</span></button>`).join('');$('#selected-cities').textContent=state.cities.length?state.cities.join(' → '):'还未选择';}
+function addCity(c){c=c.trim();if(c&&!state.cities.includes(c))state.cities.push(c);cities();}
+function total(){const sum=state.cities.reduce((a,c)=>a+(Number(state.days[c])||2),0),wanted=Number(new FormData(form).get('duration'));$('#route-total').textContent=`当前城市停留合计 ${sum} 天${wanted?` · 第一轮预计约 ${wanted} 天`:''}。跨城交通和抵离日尚未计入。`;}
+function route(){const b=new FormData(form);$('#route-context').innerHTML=`<span>目的地：<b>${esc(b.get('country'))}</b></span><span>从 ${esc(b.get('departure'))} 出发</span><span>${esc(b.get('travelers'))} 人同行</span>`;$('#route-list').innerHTML=state.cities.map((c,i)=>`<div class="route-row"><span class="route-node">${String(i+1).padStart(2,'0')}</span><div class="route-city"><strong>${esc(c)}</strong><small>${i?'从 '+esc(state.cities[i-1])+' 前往':'旅程第一站'}</small></div><label>停留 <input type="number" min="1" max="20" data-days="${esc(c)}" value="${state.days[c]||2}"> 天</label><div class="route-move"><button type="button" data-move="up" data-index="${i}" aria-label="${esc(c)}上移" ${i===0?'disabled':''}>↑</button><button type="button" data-move="down" data-index="${i}" aria-label="${esc(c)}下移" ${i===state.cities.length-1?'disabled':''}>↓</button></div></div>`).join('');total();}
+function attractions(){$('#attraction-list').innerHTML=state.cities.map(c=>{const chosen=state.sights[c]||[],list=sights[c]||['城市地标','当地美食','街区漫步','自然景观'];return `<div class="attraction-city"><div class="attraction-city-heading"><span>✳</span><div><h4>${esc(c)}</h4><p>计划停留 ${state.days[c]||2} 天 · 选择感兴趣的候选项目</p></div></div><div class="attraction-options">${list.map(s=>`<label><input type="checkbox" data-attraction-city="${esc(c)}" value="${esc(s)}" ${chosen.includes(s)?'checked':''}><span>${esc(s)}</span></label>`).join('')}</div><div class="add-row"><input type="text" data-custom-attraction="${esc(c)}" placeholder="补充想去的景点或体验"><button type="button" class="outline-button" data-add-attraction="${esc(c)}">添加 ＋</button></div>${chosen.filter(s=>!list.includes(s)).map(s=>`<span class="custom-tag">${esc(s)} <button type="button" data-remove-attraction="${esc(c)}" data-value="${esc(s)}" aria-label="移除${esc(s)}">×</button></span>`).join('')}</div>`}).join('');}
+function days(){const b=new FormData(form);$('#summary-bar').innerHTML=`<span><b>${esc(b.get('country'))}</b> · ${state.cities.length} 座城市</span><span>${esc(b.get('travelers'))} 人同行</span><span>去过：${esc(b.get('visited')||'未填写')}</span>`;let d=0;$('#day-list').innerHTML=state.cities.map(c=>Array.from({length:Number(state.days[c])||2},(_,i)=>{d++;const list=state.sights[c]||[],s=list.length?list[i%list.length]:'';return `<article class="day-row"><div class="day-number">DAY ${String(d).padStart(2,'0')}</div><div><h4>${esc(c)} · ${i===0?'抵达与熟悉城市':'继续探索'}</h4><p>${s?'优先考虑：'+esc(s)+'。':'待研究适合你的景点和体验。'}${i===0&&d>1?' 预留跨城移动时间。':''}</p></div><span class="day-tag">结构示意</span></article>`}).join('')).join('');}
+$('#slide-prev').onclick=()=>slide(state.slide-1);$('#slide-next').onclick=()=>slide(state.slide+1);$('#slide-dots').onclick=e=>{const b=e.target.closest('[data-slide]');if(b)slide(Number(b.dataset.slide))};$('#begin-planning').onclick=()=>go(1);document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(Number(b.dataset.go)));
+$('#country').oninput=cities;$('#city-options').onclick=e=>{const b=e.target.closest('[data-city-option]');if(!b)return;const c=b.dataset.cityOption;state.cities=state.cities.includes(c)?state.cities.filter(x=>x!==c):[...state.cities,c];cities()};$('#add-city').onclick=()=>{addCity($('#custom-city').value);$('#custom-city').value=''};$('#custom-city').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#add-city').click()}};document.querySelectorAll('[data-city]').forEach(b=>b.onclick=()=>{$('#country').value=b.dataset.country;addCity(b.dataset.city);go(1)});
+form.onsubmit=e=>{e.preventDefault();if(!form.reportValidity())return;if(!state.cities.length){$('#city-help').textContent='请至少选择或添加一座城市。';$('#city-options').scrollIntoView({behavior:'smooth',block:'center'});return}go(2)};
+$('#route-list').onclick=e=>{const b=e.target.closest('[data-move]');if(!b)return;const i=Number(b.dataset.index),j=i+(b.dataset.move==='up'?-1:1);if(j<0||j>=state.cities.length)return;[state.cities[i],state.cities[j]]=[state.cities[j],state.cities[i]];route()};$('#route-list').onchange=e=>{if(!e.target.matches('[data-days]'))return;state.days[e.target.dataset.days]=Math.max(1,Math.min(20,Number(e.target.value)||1));e.target.value=state.days[e.target.dataset.days];total()};$('#confirm-route').onclick=()=>{document.querySelectorAll('[data-days]').forEach(el=>state.days[el.dataset.days]=Math.max(1,Math.min(20,Number(el.value)||1)));go(3)};
+$('#attraction-list').onchange=e=>{if(!e.target.matches('[data-attraction-city]'))return;const c=e.target.dataset.attractionCity,list=state.sights[c]||[];state.sights[c]=e.target.checked?[...new Set([...list,e.target.value])]:list.filter(x=>x!==e.target.value)};$('#attraction-list').onclick=e=>{const add=e.target.closest('[data-add-attraction]');if(add){const c=add.dataset.addAttraction,input=[...document.querySelectorAll('[data-custom-attraction]')].find(x=>x.dataset.customAttraction===c),v=input.value.trim();if(v){state.sights[c]=[...new Set([...(state.sights[c]||[]),v])];attractions()}return}const rm=e.target.closest('[data-remove-attraction]');if(rm){const c=rm.dataset.removeAttraction;state.sights[c]=(state.sights[c]||[]).filter(x=>x!==rm.dataset.value);attractions()}};$('#confirm-attractions').onclick=()=>go(4);
+slide(0);cities();
