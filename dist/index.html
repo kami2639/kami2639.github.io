@@ -13,7 +13,7 @@
 <body>
   <header class="site-header">
     <a class="brand" href="#top" aria-label="漫游计划，返回顶部"><span class="brand-mark">✳</span><span>漫游计划<small>WANDERWISE</small></span></a>
-    <nav aria-label="主导航"><a href="#inspiration">旅行灵感</a><a href="#planner">规划方式</a><a href="#planner" class="nav-cta">开始规划 <span aria-hidden="true">↗</span></a></nav>
+    <nav aria-label="主导航"><a href="#inspiration">旅行灵感</a><a href="#planner">规划方式</a><a href="#planner" class="nav-cta" id="nav-start">开始规划 <span aria-hidden="true">↗</span></a></nav>
   </header>
 
   <main id="top">
@@ -22,11 +22,10 @@
         <span class="hero-overline">下一次出发，从一处心动开始</span>
         <h1 id="hero-title">想去的地方，<br><span>这次认真去看看。</span></h1>
         <p>从一个国家、一座城市，或一句“想出去走走”开始。先挑值得停留的地方，再决定路上的先后，把时间留给真正期待的风景。</p>
-        <form class="hero-search" id="hero-quick-start">
-          <label for="hero-country">这次想去哪？</label>
-          <div class="hero-search-row"><input id="hero-country" type="text" list="hero-country-options" placeholder="输入国家或地区，例如：日本" aria-label="目的地国家或地区"><datalist id="hero-country-options"><option value="日本"><option value="法国"><option value="意大利"><option value="希腊"><option value="土耳其"></datalist><button type="submit">看看如何规划 <span aria-hidden="true">↗</span></button></div>
-          <small>还没想好？<a href="#inspiration">先找一点灵感</a></small>
-        </form>
+        <div class="hero-choices">
+          <button class="hero-primary" id="hero-start" type="button">已经想好去哪儿？让我们出发 <span aria-hidden="true">↗</span></button>
+          <p>还没想好？<a href="#inspiration">先找点灵感</a></p>
+        </div>
       </div>
       <div class="hero-location"><span class="location-pin">●</span> 圣托里尼，希腊 <span class="location-dash"></span> 也许，下一站就在这里</div>
       <a class="hero-scroll" href="#inspiration" aria-label="向下探索旅行灵感">看看远方 <span aria-hidden="true">↓</span></a>
